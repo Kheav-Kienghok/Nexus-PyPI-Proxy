@@ -1,0 +1,35 @@
+# Your own certificate: certs/tls.crt (full chain) and certs/tls.key.
+# HTTP on port 80 is redirected to HTTPS automatically.
+
+(common) {
+	tls /certs/tls.crt /certs/tls.key
+	log {
+		output stdout
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+}
+
+{$SITE_ADDRESSES} {
+	import common
+
+	# The upstream is "nexus-app", not "nexus": Podman copies the host's
+	# /etc/hosts into containers, so on a host named "nexus" the name "nexus"
+	# resolves to 127.0.1.1 instead of the Nexus container.
+
+	# Docker registry API -> docker-all connector
+	handle /v2/* {
+		reverse_proxy nexus-app:5000 {
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+
+	# UI, REST API, PyPI
+	handle {
+		reverse_proxy nexus-app:8081
+	}
+}

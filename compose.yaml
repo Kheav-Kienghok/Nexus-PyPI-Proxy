@@ -1,0 +1,46 @@
+services:
+  nexus:
+    image: docker.io/sonatype/nexus3:${NEXUS_TAG:?set NEXUS_TAG in .env (pinned, e.g. 3.98.2)}
+    container_name: nexus
+    restart: unless-stopped
+    stop_grace_period: 120s          # let Nexus shut its database down cleanly
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      default:
+        aliases:
+          - nexus-app                # Caddy connects to this name (see Caddyfile)
+    expose:
+      - "8081"   # UI, API, PyPI
+      - "5000"   # Docker group (docker-all)
+    environment:
+      INSTALL4J_ADD_VM_PARAMS: "-Xms${NEXUS_HEAP:-2g} -Xmx${NEXUS_HEAP:-2g} -XX:MaxDirectMemorySize=${NEXUS_DIRECT_MEM:-3g}"
+      NEXUS_SECRETS_KEY_FILE: /run/secrets/nexus-secrets.json
+    volumes:
+      - nexus-data:/nexus-data
+      - ./secrets/nexus-secrets.json:/run/secrets/nexus-secrets.json:ro,Z
+
+  caddy:
+    image: docker.io/library/caddy:${CADDY_TAG:?set CADDY_TAG in .env (pinned, e.g. 2.11.7)}
+    container_name: caddy
+    restart: unless-stopped
+    depends_on:
+      - nexus
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESSES: "${SITE_ADDRESSES:?set SITE_ADDRESSES in .env}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - ./certs:/certs:ro,Z
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  nexus-data:
+    name: ${NEXUS_VOLUME:-nexus-data}
+  caddy-data:
+  caddy-config:

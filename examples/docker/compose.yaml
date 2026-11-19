@@ -1,0 +1,12 @@
+# Sample app that pulls its images through the Nexus cache.
+# Always pin tags; never use :latest.
+services:
+  web:
+    image: nexus.example.com/library/nginx:1.27.3
+    ports:
+      - "8080:80"
+
+  db:
+    image: nexus.example.com/library/postgres:16.4
+    environment:
+      POSTGRES_PASSWORD: change-me
