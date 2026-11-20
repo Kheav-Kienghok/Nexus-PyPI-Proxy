@@ -22,10 +22,17 @@
 
 	# Docker registry API -> docker-all connector
 	handle /v2/* {
-		reverse_proxy nexus-app:5000 {
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Forwarded-Host {host}
-		}
+			@write method POST PUT PATCH DELETE
+
+			reverse_proxy @write nexus-app:5002 {
+					header_up X-Forwarded-Proto {scheme}
+					header_up X-Forwarded-Host {host}
+			}
+
+			reverse_proxy nexus-app:5000 {
+					header_up X-Forwarded-Proto {scheme}
+					header_up X-Forwarded-Host {host}
+			}
 	}
 
 	# UI, REST API, PyPI
